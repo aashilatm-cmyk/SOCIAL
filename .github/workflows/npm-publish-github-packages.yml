@@ -1,36 +1,245 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+# To run this code you need to install the following dependencies:
+# pip install google-genai
 
-name: Node.js Package
+import os
+from google import genai
+from google.genai import types
 
-on:
-  release:
-    types: [created]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm test
+def generate():
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY"),
+    )
 
-  publish-gpr:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://npm.pkg.github.com/
-      - run: npm ci
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+    model = "gemini-3-flash-preview"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text="""INSERT_INPUT_HERE"""),
+            ],
+        ),
+    ]
+    tools = [
+        types.Tool(googleSearch=types.GoogleSearch(
+        )),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_level="HIGH",
+        ),
+        tools=tools,
+        system_instruction=[
+            types.Part.from_text(text="""import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+      ],
+      child: const SocialMediaApp(),
+    ),
+  );
+}
+
+// --- إدارة حالة التطبيق (Logic) ---
+class AppState extends ChangeNotifier {
+  int currentIndex = 0;
+  
+  void changeTab(int index) {
+    currentIndex = index;
+    notifyListeners();
+  }
+}
+
+class SocialMediaApp extends StatelessWidget {
+  const SocialMediaApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        primaryColor: Colors.blueAccent,
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      home: const MainNavigationScreen(),
+    );
+  }
+}
+
+// --- شاشة التنقل الرئيسية ---
+class MainNavigationScreen extends StatelessWidget {
+  const MainNavigationScreen({super.key});
+
+  final List<Widget> _screens = const [
+    HomeScreen(),      // الفيد
+    ExploreScreen(),   // الاستكشاف
+    CreatePostScreen(),// إنشاء منشور (Studio)
+    MessagesScreen(),  // الرسائل الخاصة
+    ProfileScreen(),   // الملف الشخصي
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    var state = context.watch<AppState>();
+
+    return Scaffold(
+      body: IndexedStack(
+        index: state.currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: state.currentIndex,
+        onTap: (index) => state.changeTab(index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: \"Feed\"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: \"Explore\"),
+          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined, size: 35), label: \"\"),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: \"Messages\"),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: \"Profile\"),
+        ],
+      ),
+    );
+  }
+}
+
+// --- 1. واجهة الفيد (Home Feed) ---
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(\"SOCIAL PRO\", style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(icon: const Icon(Icons.live_tv, color: Colors.red), onPressed: () {
+            // كود الدخول للبث المباشر
+          }),
+        ],
+      ),
+      body: ListView.builder(
+        itemCount: 10, // محاكاة 10 منشورات
+        itemBuilder: (context, index) => const PostWidget(),
+      ),
+    );
+  }
+}
+
+// ويدجت المنشور (The Professional Post Card)
+class PostWidget extends StatelessWidget {
+  const PostWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          leading: const CircleAvatar(backgroundColor: Colors.blue),
+          title: const Text(\"User_Name\"),
+          trailing: const Icon(Icons.more_vert),
+        ),
+        Container(
+          height: 400,
+          width: double.infinity,
+          color: Colors.grey[900],
+          child: const Center(child: Icon(Icons.play_circle_fill, size: 50)), // محاكاة فيديو/صورة
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: const [
+              Icon(Icons.favorite_border, size: 30),
+              SizedBox(width: 15),
+              Icon(Icons.chat_bubble_outline, size: 30),
+              SizedBox(width: 15),
+              Icon(Icons.send_outlined, size: 30),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text(\"Liked by 1,234 others\", style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+// --- 2. واجهة إنشاء منشور (Create Post) ---
+class CreatePostScreen extends StatelessWidget {
+  const CreatePostScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_upload_outlined, size: 100, color: Colors.blue),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () { /* ImagePicker Logic */ },
+            child: const Text(\"Upload Photo / Video\"),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: () { /* Live Streaming Logic */ },
+            child: const Text(\"Go Live Now 🔴\"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- 3. واجهة الرسائل (Messaging) ---
+class MessagesScreen extends StatelessWidget {
+  const MessagesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text(\"Direct Messages\")),
+      body: ListView.builder(
+        itemCount: 5,
+        itemBuilder: (context, index) => ListTile(
+          leading: const CircleAvatar(radius: 25),
+          title: Text(\"Contact ${index + 1}\"),
+          subtitle: const Text(\"Last message sent...\"),
+          trailing: const Text(\"12:30 PM\"),
+          onTap: () {
+            // كود فتح المحادثة الفورية
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// --- باقي الواجهات (تحت التطوير) ---
+class ExploreScreen extends StatelessWidget { const ExploreScreen({super.key}); @override Widget build(BuildContext context) => const Center(child: Text(\"Explore View\")); }
+class ProfileScreen extends StatelessWidget { const ProfileScreen({super.key}); @override Widget build(BuildContext context) => const Center(child: Text(\"Profile View\")); }"""),
+        ],
+    )
+
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        print(chunk.text, end="")
+
+if __name__ == "__main__":
+    generate()
+
+
+ Control + Space
